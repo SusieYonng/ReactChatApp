@@ -1,0 +1,18 @@
+.auth-panel {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.auth-panel .tab-button {
+  padding: 0.5rem 1rem;
+  appearance: none;
+  background: none;
+  text-decoration: underline;
+}
+
+.auth-panel .tab-button.active {
+  color: #fff;
+}

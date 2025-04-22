@@ -1,0 +1,33 @@
+.friend-search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #fff;
+  box-sizing: border-box;
+  padding: 1rem;
+}
+
+.friend-search-bar input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+}
+
+.clear-btn {
+  position: absolute;
+  top: 50%;      
+  transform: translateY(-50%);
+  right: 1.5rem;
+  border: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1; /* ensures text baseline is centered */
+  color: #888;
+  background-color: #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+}

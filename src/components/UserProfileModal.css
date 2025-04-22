@@ -1,0 +1,95 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: #fff;
+  padding: 2rem;
+  width: 90%;
+  max-width: 25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 0.625rem rgba(0, 0, 0, 0.3);
+}
+
+.modal .title {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal form label {
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+  display: block;
+}
+
+.modal form input,
+.modal form textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+}
+
+.modal form textarea {
+  resize: vertical;
+  min-height: 3.75rem;
+}
+
+.feedback {
+  font-size: 0.85rem;
+  color: green;
+  text-align: center;
+}
+
+.feedback.error {
+  color: red;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  border-radius: 0.25rem;
+}
+
+.modal-actions button[type="submit"] {
+  background-color: #4caf50;
+  color: white;
+}
+
+.modal-actions button[type="submit"]:hover {
+  background-color: #45a049;
+}
+
+.modal-actions button[type="button"] {
+  background-color: #e0e0e0;
+}
+
+.modal-actions button[type="button"]:hover {
+  background-color: #c0c0c0;
+}
