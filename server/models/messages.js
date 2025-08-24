@@ -22,11 +22,19 @@ export function sendPrivateMessage(from, to, text) {
     time: timestamp,
   };
 
+  console.log(`Storing message: from=${from}, to=${to}, text="${text}"`);
+  console.log('Current messages state:', messages);
+
   ensureMessageArray(from, to);
   ensureMessageArray(to, from);
 
   messages[from][to].push(msg);
   messages[to][from].push(msg);
+  
+  console.log(`Message stored. messages[${from}][${to}].length = ${messages[from][to].length}`);
+  console.log(`Message stored. messages[${to}][${from}].length = ${messages[to][from].length}`);
+  
+  return msg;
 }
 
 export function getPrivateMessages(userA, userB) {
@@ -37,7 +45,9 @@ export function getPrivateMessages(userA, userB) {
 }
 
 export function getAllMessagesForUser(username) {
-  return messages[username] || {};
+  const result = messages[username] || {};
+  console.log(`Getting all messages for user ${username}:`, result);
+  return result;
 }
 
 export function markMessagesAsRead(user, contact) {
@@ -52,14 +62,23 @@ export function getUnreadOverview(username) {
   const readStatus = lastRead[username] || {};
   const overview = {};
 
+  console.log(`Getting unread overview for user ${username}`);
+  console.log('User messages:', userMessages);
+  console.log('Read status:', readStatus);
+
   for (const contact in userMessages) {
     const msgs = userMessages[contact];
     const lastReadTime = readStatus[contact] || 0;
     const unreadCount = msgs.filter(
       (msg) => msg.from !== username && msg.time > lastReadTime
     ).length;
-    overview[contact] = unreadCount;
+    overview[contact] = {
+      count: unreadCount,
+      lastMsg: msgs.length > 0 ? msgs[msgs.length - 1].text : "",
+      lastMsgTime: msgs.length > 0 ? msgs[msgs.length - 1].time : null
+    };
   }
 
+  console.log('Unread overview result:', overview);
   return overview;
 }

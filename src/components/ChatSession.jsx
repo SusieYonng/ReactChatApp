@@ -3,6 +3,7 @@ import { fetchPrivateMessages, sendPrivateMessage } from "../services/messages";
 import "./ChatSession.css";
 import useChatScroll from "../hooks/useChatScroll";
 import { markMessagesAsRead } from "../services/messages";
+import useWebSocket from "../hooks/useWebSocket.js";
 
 export default function ChatSession({
   currentUser,
@@ -16,6 +17,7 @@ export default function ChatSession({
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const { isConnected } = useWebSocket();
 
   const prevUsernameRef = useRef(chatWith?.username);
 
@@ -78,10 +80,61 @@ export default function ChatSession({
           }
         });
     };
+    
     loadMessages();
-    const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
-  }, [chatWith, dispatch, handleAuthError, messages.length]);
+    
+    // Only use polling as fallback when WebSocket is not connected
+    let interval;
+    if (!isConnected) {
+      interval = setInterval(loadMessages, 5000);
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [chatWith, dispatch, handleAuthError, messages.length, isConnected]);
+
+  // Listen for new messages via WebSocket
+  useEffect(() => {
+    const handleNewMessage = (event) => {
+      const message = event.detail;
+      
+      // Check if this message is relevant to current chat
+      if (message.from === chatWith?.username || message.to === chatWith?.username) {
+        // Refresh messages for current chat
+        fetchPrivateMessages(chatWith.username)
+          .then((data) => {
+            setMessages(data.messages);
+            
+            // Update conversation last message
+            if (data.messages.length > 0) {
+              const lastMsg = data.messages[data.messages.length - 1];
+              dispatch({
+                type: "UPDATE_LAST_MSG",
+                payload: {
+                  username: chatWith.username,
+                  lastMsg: lastMsg.text,
+                  lastMsgTime: lastMsg.time,
+                },
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn("Failed to refresh messages after WebSocket notification", err);
+          });
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('newMessageReceived', handleNewMessage);
+
+    return () => {
+      // Remove event listener
+      window.removeEventListener('newMessageReceived', handleNewMessage);
+    };
+  }, [chatWith, dispatch]);
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -93,7 +146,7 @@ export default function ChatSession({
       .then(() => {
         setText("");
         draftMessagesRef.current[chatWith.username] = "";
-        return fetchPrivateMessages(chatWith?.username);
+        return fetchPrivateMessages(chatWith.username);
       })
       .then((data) => {
         setMessages(data.messages);
@@ -133,6 +186,9 @@ export default function ChatSession({
       )}
       <h3 className="chat-title">
         Chat with {chatWith?.nickname || chatWith?.username}
+        {/* {!isConnected && (
+          <span className="connection-status offline">(Offline - using polling)</span>
+        )} */}
       </h3>
       <div className="chat-messages" ref={chatContainerRef}>
         {messages.map((msg) => (

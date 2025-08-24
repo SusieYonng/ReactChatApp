@@ -71,7 +71,12 @@ export default function MessageList({
               {conv.username.charAt(0).toUpperCase()}
               {conv.unreadCount > 0 &&
                 selectedUser?.username !== conv.username && (
-                  <div className="unread-badge">{conv.unreadCount}</div>
+                  <div 
+                    className="unread-badge" 
+                    key={`${conv.username}-${conv.unreadCount}-${Date.now()}`}
+                  >
+                    {conv.unreadCount}
+                  </div>
                 )}
             </div>
             <div className="conversation-info">

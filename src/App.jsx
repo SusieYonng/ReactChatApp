@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuthPanel from "./views/AuthPanel";
 import MainChatPage from "./views/MainChatPage";
 import "./App.css";
@@ -12,10 +12,36 @@ export default function App() {
     useAuth();
   const [isOnline, setIsOnline] = useState(true);
 
+  // Check network status on mount and when network changes
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    // Set initial network status
+    setIsOnline(navigator.onLine);
+
+    // Listen for network status changes
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Show network banner when network is offline, regardless of login status
+  const shouldShowNetworkBanner = !isOnline;
+
   return (
     <NetworkStatusContext.Provider value={{ isOnline, setIsOnline }}>
       <main className="app-container">
-        {!isOnline && (
+        {shouldShowNetworkBanner && (
           <div className="network-banner">
             ⚠️ Network disconnected. Please check your connection.
           </div>

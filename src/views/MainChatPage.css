@@ -47,3 +47,23 @@ h3 {
   top: 4.5rem; /* Adjust this value based on the height of.friend-search-bar */
   z-index: 9; /* Don't make it higher than .friend-search-bar */
 }
+
+.debug-toggle {
+  text-align: center;
+  margin: 8px 0;
+}
+
+.debug-toggle-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.debug-toggle-btn:hover {
+  background-color: #5a6268;
+}

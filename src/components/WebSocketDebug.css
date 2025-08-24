@@ -1,0 +1,79 @@
+.websocket-debug {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.websocket-debug h4 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 14px;
+}
+
+.debug-section {
+  margin: 8px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.debug-section strong {
+  min-width: 120px;
+  color: #6c757d;
+}
+
+.debug-value {
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  word-break: break-all;
+  flex: 1;
+  transition: background-color 0.2s;
+}
+
+.debug-value:hover {
+  background-color: #dee2e6;
+}
+
+.debug-reconnect-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.debug-reconnect-btn:hover {
+  background-color: #0056b3;
+}
+
+.debug-tips {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #dee2e6;
+}
+
+.debug-tips h5 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 12px;
+}
+
+.debug-tips ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #6c757d;
+}
+
+.debug-tips li {
+  margin: 2px 0;
+  font-size: 11px;
+}
