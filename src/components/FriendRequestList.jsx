@@ -12,11 +12,16 @@ export default function FriendRequestList({ onAdd }) {
   }, []);
 
   function handleResponse(from, action) {
+    console.log(`Responding to friend request: from=${from}, action=${action}`);
     respondToRequest(from, action).then(() => {
+      console.log(`Friend request response successful: ${action} from ${from}`);
       if (onAdd) {
+        console.log('Calling onAdd callback to refresh friends list');
         onAdd();
       }
       setRequests((reqs) => reqs.filter((r) => r.username !== from));
+    }).catch((error) => {
+      console.error('Error responding to friend request:', error);
     });
   }
 

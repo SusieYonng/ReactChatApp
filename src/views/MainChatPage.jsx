@@ -4,6 +4,8 @@ import FriendList from "../components/FriendList";
 import MessageList from "../components/MessageList";
 import FriendProfile from "../components/FriendProfile";
 import ChatSession from "../components/ChatSession";
+import WebSocketStatus from "../components/WebSocketStatus";
+import WebSocketDebug from "../components/WebSocketDebug";
 import { markMessagesAsRead } from "../services/messages";
 import "./MainChatPage.css";
 import useConversations from "../hooks/useConversations";
@@ -13,9 +15,10 @@ export default function MainChatPage({ currentUser, onLogout, handleAuthError })
   const [view, setView] = useState("chat"); // 'chat' or 'friends'
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const { friends, loadFriends } = useFriends(view, handleAuthError);
-  const { mergedConversations, unreadMap, setUnreadMap, dispatch, } =
+  const { mergedConversations, unreadMap, setUnreadMap, dispatch, isWebSocketConnected } =
     useConversations(friends, handleAuthError);
 
   const draftMessagesRef = useRef({});
@@ -35,17 +38,21 @@ export default function MainChatPage({ currentUser, onLogout, handleAuthError })
   }, [friends, selectedUser, setSelectedUser]);
 
   const startChatWithUser = (user) => {
+    console.log('Starting chat with user:', user);
     setSelectedUser(user);
     setView("chat");
 
+    const newConversation = {
+      username: user.username,
+      nickname: user.nickname,
+      lastMsg: "",
+      lastMsgTime: null,
+    };
+    
+    console.log('Adding new conversation:', newConversation);
     dispatch({
       type: "ADD",
-      payload: {
-        username: user.username,
-        nickname: user.nickname,
-        lastMsg: "",
-        lastMsgTime: null,
-      },
+      payload: newConversation,
     });
   };
 
@@ -56,20 +63,44 @@ export default function MainChatPage({ currentUser, onLogout, handleAuthError })
 
   const renderMiddlePane = () => {
     return view === "chat" ? (
-      <MessageList
-        onSelectUser={(user) => handleSelectUser(user)}
-        selectedUser={selectedUser}
-        conversations={mergedConversations}
-        dispatch={dispatch}
-        friends={friends}
-      />
+      <div className="middle-pane">
+        <WebSocketStatus />
+        {showDebug && <WebSocketDebug />}
+        <div className="debug-toggle">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="debug-toggle-btn"
+          >
+            {showDebug ? '🔽 Hide Debug' : '🔽 Show Debug'}
+          </button>
+        </div>
+        <MessageList
+          onSelectUser={(user) => handleSelectUser(user)}
+          selectedUser={selectedUser}
+          conversations={mergedConversations}
+          dispatch={dispatch}
+          friends={friends}
+        />
+      </div>
     ) : (
-      <FriendList
-        friends={friends}
-        loadFriends={loadFriends}
-        onSelectUser={setSelectedFriend}
-        selectedUser={selectedFriend}
-      />
+      <div className="middle-pane">
+        <WebSocketStatus />
+        {showDebug && <WebSocketDebug />}
+        <div className="debug-toggle">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="debug-toggle-btn"
+          >
+            {showDebug ? '🔽 Hide Debug' : '🔽 Show Debug'}
+          </button>
+        </div>
+        <FriendList
+          friends={friends}
+          loadFriends={loadFriends}
+          onSelectUser={setSelectedFriend}
+          selectedUser={selectedFriend}
+        />
+      </div>
     );
   };
 

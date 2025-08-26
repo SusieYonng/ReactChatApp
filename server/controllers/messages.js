@@ -12,112 +12,164 @@ import {
 const router = express.Router();
 
 router.get("/messages/conversations", (req, res) => {
-  const username = getSessionUser(req.cookies.sid);
-  if (!username) {
-    return res.status(401).json({ error: "auth-missing" });
-  }
-
-  const result = [];
-  const messageMap = getAllMessagesForUser(username);
-
-  Object.keys(messageMap).forEach((otherUser) => {
-    const conversation = messageMap[otherUser];
-    if (conversation.length > 0) {
-      const last = conversation[conversation.length - 1];
-      const friend = getUserByUsername(otherUser);
-
-      result.push({
-        username: otherUser,
-        nickname: friend?.nickname || otherUser,
-        avatar: friend?.avatar || "",
-        lastMsg: last.text,
-        lastMsgTime: last.time,
-      });
+  try {
+    const username = getSessionUser(req.cookies.sid);
+    if (!username) {
+      return res.status(401).json({ error: "auth-missing" });
     }
-  });
 
-  result.sort((a, b) => b.lastMsgTime - a.lastMsgTime);
+    console.log(`Getting conversations for user: ${username}`);
+    
+    const result = [];
+    const messageMap = getAllMessagesForUser(username);
+    
+    console.log('Message map from getAllMessagesForUser:', messageMap);
 
-  res.json({ conversations: result });
+    Object.keys(messageMap).forEach((otherUser) => {
+      const conversation = messageMap[otherUser];
+      console.log(`Processing conversation with ${otherUser}:`, conversation);
+      
+      if (conversation.length > 0) {
+        const last = conversation[conversation.length - 1];
+        const friend = getUserByUsername(otherUser);
+        
+        const conversationEntry = {
+          username: otherUser,
+          nickname: friend?.nickname || otherUser,
+          avatar: friend?.avatar || "",
+          lastMsg: last.text,
+          lastMsgTime: last.time,
+        };
+        
+        console.log(`Adding conversation entry:`, conversationEntry);
+        result.push(conversationEntry);
+      }
+    });
+
+    result.sort((a, b) => b.lastMsgTime - a.lastMsgTime);
+    console.log('Final conversations result:', result);
+
+    res.json({ conversations: result });
+  } catch (error) {
+    console.error('Error getting conversations:', error);
+    res.status(500).json({ error: "internal-server-error" });
+  }
 });
 
 router.post("/messages/private", (req, res) => {
-  const sid = req.cookies.sid;
-  const sender = getSessionUser(sid);
+  try {
+    const sid = req.cookies.sid;
+    const sender = getSessionUser(sid);
 
-  if (!sender) {
-    return res.status(401).json({ error: "auth-missing" });
+    if (!sender) {
+      return res.status(401).json({ error: "auth-missing" });
+    }
+
+    const { to, message } = req.body;
+
+    if (!to || !message || typeof message !== "string") {
+      return res.status(400).json({ error: "invalid-message" });
+    }
+
+    if (!getUserByUsername(to)) {
+      return res.status(404).json({ error: "user-not-found" });
+    }
+
+    console.log(`Sending message: from=${sender}, to=${to}, message="${message}"`);
+    
+    const savedMessage = sendPrivateMessage(sender, to, message);
+    console.log('Message saved:', savedMessage);
+    
+    // Send WebSocket notification
+    const wsManager = req.app.get('wsManager');
+    if (wsManager) {
+      console.log('WebSocket manager found, sending notification');
+      wsManager.sendNewMessageNotification(sender, to, {
+        id: Date.now(), // Generate a simple ID
+        from: savedMessage.from,
+        to: savedMessage.to,
+        text: savedMessage.text,
+        time: savedMessage.time
+      });
+    } else {
+      console.log('WebSocket manager not found');
+    }
+    
+    res.json({ success: true, message: savedMessage });
+  } catch (error) {
+    console.error('Error sending private message:', error);
+    res.status(500).json({ error: "internal-server-error" });
   }
-
-  const { to, message } = req.body;
-
-  if (!to || !message || typeof message !== "string") {
-    return res.status(400).json({ error: "invalid-message" });
-  }
-
-  if (!getUserByUsername(to)) {
-    return res.status(404).json({ error: "user-not-found" });
-  }
-
-  sendPrivateMessage(sender, to, message);
-  res.json({ success: true });
 });
 
 router.get("/messages/private/:username", (req, res) => {
-  const sid = req.cookies.sid;
-  const currentUser = getSessionUser(sid);
-  const otherUser = req.params.username;
+  try {
+    const sid = req.cookies.sid;
+    const currentUser = getSessionUser(sid);
+    const otherUser = req.params.username;
 
-  if (!currentUser) {
-    return res.status(401).json({ error: "auth-missing" });
+    if (!currentUser) {
+      return res.status(401).json({ error: "auth-missing" });
+    }
+
+    if (!getUserByUsername(otherUser)) {
+      return res.status(404).json({ error: "user-not-found" });
+    }
+
+    const messages = getPrivateMessages(currentUser, otherUser);
+    res.json({ messages });
+  } catch (error) {
+    console.error('Error getting private messages:', error);
+    res.status(500).json({ error: "internal-server-error" });
   }
-
-  if (!getUserByUsername(otherUser)) {
-    return res.status(404).json({ error: "user-not-found" });
-  }
-
-  const messages = getPrivateMessages(currentUser, otherUser);
-  res.json({ messages });
 });
 
 router.get("/messages/unread-overview", (req, res) => {
-  const sid = req.cookies.sid;
-  const username = getSessionUser(sid);
-  if (!username) {
-    return res.status(401).json({ error: "auth-missing" });
+  try {
+    const sid = req.cookies.sid;
+    const username = getSessionUser(sid);
+    if (!username) {
+      return res.status(401).json({ error: "auth-missing" });
+    }
+
+    const overview = getUnreadOverview(username);
+    const result = {};
+
+    for (const contact in overview) {
+      const unreadCount = overview[contact];
+      
+      result[contact] = {
+        count: unreadCount.count,
+        lastMsg: unreadCount.lastMsg || "",
+        lastMsgTime: unreadCount.lastMsgTime || null,
+      };
+    }
+
+    res.json({ overview: result });
+  } catch (error) {
+    console.error('Error getting unread overview:', error);
+    res.status(500).json({ error: "internal-server-error" });
   }
-
-  const overview = getUnreadOverview(username);
-  const result = {};
-
-  for (const contact in overview) {
-    const unreadCount = overview[contact];
-    const allMessages = getPrivateMessages(contact, username); // messages from contact to user
-    const lastUnread = allMessages.filter((msg) => msg.from === contact).pop();
-
-    result[contact] = {
-      count: unreadCount,
-      lastMsg: lastUnread?.text || "",
-      lastMsgTime: lastUnread?.time || null,
-    };
-  }
-
-  res.json({ overview: result });
 });
 
 router.post("/messages/mark-read", (req, res) => {
-  const sid = req.cookies.sid;
-  const username = getSessionUser(sid);
-  const { contact } = req.body;
-  if (!username) {
-    return res.status(401).json({ error: "auth-missing" });
-  }
-  if (!contact) {
-    return res.status(400).json({ error: "missing-contact" });
-  }
+  try {
+    const sid = req.cookies.sid;
+    const username = getSessionUser(sid);
+    const { contact } = req.body;
+    if (!username) {
+      return res.status(401).json({ error: "auth-missing" });
+    }
+    if (!contact) {
+      return res.status(400).json({ error: "missing-contact" });
+    }
 
-  markMessagesAsRead(username, contact);
-  res.json({ success: true });
+    markMessagesAsRead(username, contact);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    res.status(500).json({ error: "internal-server-error" });
+  }
 });
 
 export default router;

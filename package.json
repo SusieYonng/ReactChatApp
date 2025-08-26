@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "vite build && vite preview",
     "start": "node server/server.js",
     "dev:server": "node --watch server/server.js"
   },
@@ -15,7 +15,8 @@
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

@@ -1,132 +1,133 @@
-# WeChat-Style Chat App (1-on-1 Messaging)
+# React Chat App
 
-This is a web-based one-on-one messaging application built with **React + Vite + Express (Node.js)**. It supports real-time chat between registered users, with user profiles, friend management, and chat history display — modeled after a simplified WeChat-style layout.
+A real-time chat application built with React, Node.js, WebSocket, and PostgreSQL.
 
----
+## Features
 
-## 🚀 Features
+- **Real-time messaging** using WebSocket connections
+- **Persistent data storage** with PostgreSQL database
+- **User authentication** and session management
+- **Friend management** with friend requests
+- **Unread message tracking**
+- **Responsive design** for mobile and desktop
 
-- **User Authentication**
+## Architecture
 
-  - Register with a unique username
-  - Log in and log out securely using session-based authentication
+- **Frontend**: React with Vite
+- **Backend**: Node.js with Express
+- **Real-time**: WebSocket for instant message delivery
+- **Database**: PostgreSQL for persistent storage
+- **Authentication**: Cookie-based sessions
 
-- **Profile Management**
+## Prerequisites
 
-  - View and edit nickname and personal bio (signature)
-  - Avatar generated from username initials
+- Node.js 18+ 
+- PostgreSQL 15+
+- Docker (optional, for running PostgreSQL)
 
-- **Friend System**
+## Quick Start
 
-  - Search and add registered users as friends
-  - Accept or reject incoming friend requests
-  - View detailed profile of any friend
+### Option 1: Using Docker (Recommended)
 
-- **1-on-1 Messaging**
+1. **Start the application:**
+   ```bash
+   docker-compose up -d
+   ```
 
-  - Send and receive private messages with friends
-  - Timestamped messages with automatic scrolling to latest
-  - Message draft saved per conversation (auto-restored)
-  - New message notification badge for unseen messages
-  - Scroll up to view history with new message popups when not at the bottom
+2. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3000/api/v1
 
-- **Chat Layout**
-  - Three-pane responsive layout:
-    - Left: Navigation (Avatar, Chats, Contacts, Logout)
-    - Middle: Conversation list or contact list
-    - Right: Chat messages or user profiles
+### Option 2: Local Development
 
----
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## 🛠️ Getting Started
+2. **Start the server:**
+   ```bash
+   npm start
+   ```
 
-### 1. Install Dependencies
+3. **In another terminal, start the frontend:**
+   ```bash
+   npm run dev
+   ```
 
-After cloning the repository, install all required packages:
+## Environment Configuration
 
-```bash
-npm install
+The application uses in-memory storage for development. For production with PostgreSQL, create a `.env` file in the `server` directory:
+
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=development
 ```
 
-### 2. Development Mode
+## API Endpoints
 
-To run the app in development mode, start both frontend and backend:
+- `GET /api/v1/messages/conversations` - Get user conversations
+- `POST /api/v1/messages/private` - Send private message
+- `GET /api/v1/messages/private/:username` - Get private messages with user
+- `GET /api/v1/messages/unread-overview` - Get unread message overview
+- `POST /api/v1/messages/mark-read` - Mark messages as read
+- `GET /health` - Health check endpoint
 
-```bash
-# Start the Vite dev server (frontend)
-npm run dev
+## WebSocket Events
 
-# Start the Express backend (in another terminal)
-npm run dev:server
-```
+- `connection` - Connection confirmation
+- `new_message` - New message notification
+- `friend_request` - Friend request notification
+- `friend_request_response` - Friend request response notification
 
-### 3. Production Mode
+## Development
 
-To build and preview the production version:
+- **Server development mode:** `npm run dev:server`
+- **Frontend development mode:** `npm run dev`
+- **Build frontend:** `npm run build`
+- **Preview build:** `npm run preview`
 
-```bash
-# Build frontend assets
-npm run build
+## Data Storage
 
-# Serve the production build and start backend
-npm run start
-```
+The application uses in-memory storage with the following data structures:
 
-Then open your browser at `http://localhost:3000` to view the app.
+- `users` - User accounts and profiles
+- `sessions` - User session management
+- `messages` - Chat messages
+- `message_read_status` - Message read tracking
+- `friends` - Friend relationships and requests
 
-## 💻 How to Use
+**Note**: All data is stored in memory and will be lost when the server restarts.
 
-1. See **Getting Started** above to launch the application locally.
+## Real-time Features
 
-2. **Register / Log In**
+- **Instant messaging** - Messages are delivered in real-time via WebSocket
+- **Fallback polling** - Automatic fallback to HTTP polling if WebSocket is unavailable
+- **Connection status** - Visual indicators show WebSocket connection status
+- **Automatic reconnection** - WebSocket automatically reconnects on connection loss
 
-   - Use a unique username (no password for demo simplicity)
-   - To simulate multiple users, use different browsers or private/incognito windows
+## Performance Improvements
 
-3. **Add and Chat with Friends**
-   - Switch to “Contacts”
-   - Search for exact usernames
-   - Send a friend request, wait for approval
-   - Start chatting from contact profile or recent chat list
+- **Eliminated polling** - No more 5-10 second delays for new messages
+- **In-memory storage** - Fast access to messages and user data
+- **Real-time messaging** - Instant message delivery via WebSocket
+- **Graceful degradation** - Falls back to polling when WebSocket unavailable
 
-## 📌 Notes
+## Troubleshooting
 
-- This is a course project and not meant for production use
+### WebSocket Connection Issues
 
----
+1. Check browser console for WebSocket errors
+2. Verify server is running on correct port
+3. Check firewall settings
+4. Application will automatically fall back to polling
 
-# Third-Party Icon Assets
+### Port Conflicts
 
-The following icons used in this project are sourced from Google Fonts Icons.
+- Default server port: 3000
+- Update port in environment variables if needed
 
-## Icons
+## License
 
-### chat.svg
-
-- **Filename**: chat.svg
-- **Origin**: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:chat&icon.color=%231f1f1f
-- **License**: [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
-### chat_active.svg
-
-- **Filename**: chat_active.svg
-- **Origin**: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:chat&icon.color=%2345a049
-- **License**: [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
-### contacts.svg
-
-- **Filename**: contacts.svg
-- **Origin**: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:contacts&icon.color=%231f1f1f
-- **License**: [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
-### contacts_active.svg
-
-- **Filename**: contacts_active.svg
-- **Origin**: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:contacts&icon.color=%2345a049
-- **License**: [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
-### logout.svg
-
-- **Filename**: logout.svg
-- **Origin**: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:logout&icon.color=%231f1f1f
-- **License**: [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+MIT
