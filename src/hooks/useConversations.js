@@ -4,7 +4,6 @@ import {
   fetchUnreadOverview,
 } from "../services/messages";
 import { NetworkStatusContext } from "..//NetworkStatusContext";
-import useWebSocket from "./useWebSocket.js";
 
 const conversationReducer = (state, action) => {
   switch (action.type) {
@@ -43,7 +42,6 @@ export default function useConversations(friends, handleAuthError) {
   const [unreadMap, setUnreadMap] = useState({});
   const [conversations, dispatch] = useReducer(conversationReducer, []);
   const { setIsOnline } = useContext(NetworkStatusContext);
-  const { isConnected } = useWebSocket();
   
   // Use ref to access latest conversations state without causing re-renders
   const conversationsRef = useRef(conversations);
@@ -123,12 +121,6 @@ export default function useConversations(friends, handleAuthError) {
       // If message.from is someone else, then otherUser is message.from
       const currentUsername = friends.find(f => f.username === message.from)?.username;
       const otherUser = message.from === currentUsername ? message.to : message.from;
-      if (import.meta.env.DEV) {
-        console.log('Current user from friends:', currentUsername);
-        console.log('Message from:', message.from);
-        console.log('Message to:', message.to);
-        console.log('Other user in conversation:', otherUser);
-      }
       
       // Update conversation last message immediately
       dispatch({
@@ -233,6 +225,5 @@ export default function useConversations(friends, handleAuthError) {
     unreadMap,
     setUnreadMap,
     dispatch,
-    isWebSocketConnected: isConnected,
   };
 }

@@ -1,18 +1,31 @@
 import { WebSocketServer } from 'ws';
 import { getSessionUser } from './models/sessions.js';
+import { config } from './config.js';
 
 
 export class WebSocketManager {
   constructor(server) {
+    this.pingInterval = config.websocket.pingInterval;
+    this.pingTimeout = config.websocket.pingTimeout;
     // Create WebSocket server with CORS support
     this.wss = new WebSocketServer({
       server,
       // Add CORS support
       verifyClient: (info) => {
-        console.log('WebSocket connection attempt from:', info.origin);
-        console.log('Headers:', info.req.headers);
-        // Allow all origins (development only). In production, restrict allowed origins!
-        return true;
+        const origin = info.origin;
+        console.log('WebSocket connection attempt from:', origin);
+        
+        if (config.isDev) {
+          return true; // Allow all origins in development
+        }
+        
+        // In production, allow the request origin (same as Express CORS)
+        if (origin) {
+          return true;
+        }
+        
+        console.log(`Rejected WebSocket connection without origin`);
+        return false;
       }
     });
 
@@ -72,6 +85,35 @@ export class WebSocketManager {
     console.log(`User ${username} connected via WebSocket`);
     console.log(`Total connected users: ${this.clients.size}`);
     console.log(`Connected usernames: ${Array.from(this.clients.keys()).join(', ')}`);
+    
+    // Setup ping-pong for connection keepalive
+    ws.isAlive = true;
+    ws.pingTimeout = null;
+    
+    const ping = () => {
+      if (ws.isAlive === false) {
+        console.log(`Connection timeout for user ${username}`);
+        ws.terminate();
+        return;
+      }
+      
+      ws.isAlive = false;
+      ws.ping();
+      ws.pingTimeout = setTimeout(() => {
+        console.log(`Ping timeout for user ${username}`);
+        ws.terminate();
+      }, this.pingTimeout);
+    };
+    
+    ws.pingInterval = setInterval(ping, this.pingInterval);
+    
+    ws.on('pong', () => {
+      ws.isAlive = true;
+      if (ws.pingTimeout) {
+        clearTimeout(ws.pingTimeout);
+        ws.pingTimeout = null;
+      }
+    });
 
     // Send connection confirmation
     ws.send(JSON.stringify({
@@ -112,6 +154,14 @@ export class WebSocketManager {
     ws.on('close', (code, reason) => {
       console.log(`User ${username} disconnected from WebSocket: ${code} - ${reason}`);
       this.clients.delete(username);
+      
+      // Clean up ping/pong timers
+      if (ws.pingInterval) {
+        clearInterval(ws.pingInterval);
+      }
+      if (ws.pingTimeout) {
+        clearTimeout(ws.pingTimeout);
+      }
     });
 
     // Handle errors

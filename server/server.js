@@ -4,6 +4,7 @@ import http from 'http';
 import process from 'process';
 import routes from './routes.js';
 import { WebSocketManager } from './websocket.js';
+import { config } from './config.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -14,9 +15,15 @@ const wsManager = new WebSocketManager(server);
 // Make WebSocket manager available to routes
 app.set('wsManager', wsManager);
 
-// Add CORS middleware
+// CORS middleware with environment-specific configuration
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  if (config.isDev) {
+    res.header('Access-Control-Allow-Origin', '*');
+  } else if (req.headers.origin) {
+    // In production, use the request origin
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -59,13 +66,12 @@ app.get('/health', (req, res) => {
 // Start server
 function startServer() {
   try {
-    // Start server
-    const PORT = process.env.PORT || 3000;
-    server.listen(PORT, () => {
-      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    server.listen(config.port, () => {
+      console.log(`🚀 Server is running on http://localhost:${config.port}`);
+      console.log(`🌍 Environment: ${config.env}`);
       console.log(`🔌 WebSocket server is ready`);
       console.log(`💾 Using in-memory storage (data will be lost on restart)`);
-      console.log(`🌐 CORS enabled for all origins`);
+      console.log(`🔒 CORS: ${config.isDev ? 'enabled for all origins' : 'using request origin'}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
