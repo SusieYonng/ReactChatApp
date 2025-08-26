@@ -23,6 +23,15 @@ jobs:
         script: |
           cd ~/ReactChatApp
           git pull origin main
+          # Stop and remove containers
           docker compose down
-          docker compose build
+          # Clean up old images
+          docker system prune -f
+          # Force rebuild without cache
+          docker compose build --no-cache
+          # Start containers in production mode
           docker compose up -d
+          # Verify deployment status
+          docker ps
+          # Display recent application logs
+          docker logs chatapp --tail 50

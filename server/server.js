@@ -1,6 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import http from 'http';
+import process from 'process';
 import routes from './routes.js';
 import { WebSocketManager } from './websocket.js';
 
