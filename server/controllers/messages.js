@@ -18,16 +18,13 @@ router.get("/messages/conversations", (req, res) => {
       return res.status(401).json({ error: "auth-missing" });
     }
 
-    console.log(`Getting conversations for user: ${username}`);
+    // console.log(`Getting conversations for user: ${username}`);
     
     const result = [];
     const messageMap = getAllMessagesForUser(username);
-    
-    console.log('Message map from getAllMessagesForUser:', messageMap);
 
     Object.keys(messageMap).forEach((otherUser) => {
       const conversation = messageMap[otherUser];
-      console.log(`Processing conversation with ${otherUser}:`, conversation);
       
       if (conversation.length > 0) {
         const last = conversation[conversation.length - 1];
@@ -41,13 +38,13 @@ router.get("/messages/conversations", (req, res) => {
           lastMsgTime: last.time,
         };
         
-        console.log(`Adding conversation entry:`, conversationEntry);
+        // console.log(`Adding conversation entry:`, conversationEntry);
         result.push(conversationEntry);
       }
     });
 
     result.sort((a, b) => b.lastMsgTime - a.lastMsgTime);
-    console.log('Final conversations result:', result);
+    // console.log('Final conversations result:', result);
 
     res.json({ conversations: result });
   } catch (error) {
@@ -75,10 +72,7 @@ router.post("/messages/private", (req, res) => {
       return res.status(404).json({ error: "user-not-found" });
     }
 
-    console.log(`Sending message: from=${sender}, to=${to}, message="${message}"`);
-    
     const savedMessage = sendPrivateMessage(sender, to, message);
-    console.log('Message saved:', savedMessage);
     
     // Send WebSocket notification
     const wsManager = req.app.get('wsManager');

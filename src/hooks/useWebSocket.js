@@ -50,24 +50,11 @@ export default function useWebSocket() {
     setIsConnected(true);
     setConnectionStatus('connected');
     reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful connection
-    
-    // Start ping interval
-    pingIntervalRef.current = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 30000); // Ping every 30 seconds
   }, []);
 
   const handleClose = useCallback((event) => {
     console.log('WebSocket disconnected:', event.code, event.reason);
     setIsConnected(false);
-    
-    // Clear ping interval
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
     
     // Determine disconnect reason and set appropriate status
     if (event.code === 1000) {
@@ -109,9 +96,6 @@ export default function useWebSocket() {
       switch (data.type) {
         case 'connection':
           console.log('WebSocket connection confirmed for user:', data.username);
-          break;
-        case 'pong':
-          // Ping response received
           break;
         case 'new_message':
           // console.log('New message notification received:', data);
@@ -172,9 +156,6 @@ export default function useWebSocket() {
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
       console.log('Connecting to:', wsUrl);
-      console.log('Current origin:', window.location.origin);
-      console.log('Current cookies:', document.cookie);
-      console.log('Network status:', networkStatus);
       
       wsRef.current = new WebSocket(wsUrl);
       
