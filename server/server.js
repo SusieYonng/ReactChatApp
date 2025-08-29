@@ -5,6 +5,7 @@ import process from 'process';
 import routes from './routes.js';
 import { WebSocketManager } from './websocket.js';
 import { config } from './config.js';
+import { initializeDatabase, testConnection, closePool } from './database.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -42,13 +43,14 @@ app.use(express.static('dist')); // serve Vite static build
 app.use('/api/v1', routes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   try {
     const wsConnected = wsManager.getConnectedUsersCount();
+    const dbConnected = await testConnection();
     
     res.json({
       status: 'ok',
-      database: 'not_configured',
+      database: dbConnected ? 'connected' : 'disconnected',
       websocket: {
         connected_users: wsConnected,
         status: 'running'
@@ -58,19 +60,22 @@ app.get('/health', (req, res) => {
   } catch (error) {
     res.status(500).json({
       status: 'error',
+      database: 'disconnected',
       error: error.message
     });
   }
 });
 
 // Start server
-function startServer() {
+async function startServer() {
   try {
+    await initializeDatabase();
+    
     server.listen(config.port, () => {
       console.log(`🚀 Server is running on http://localhost:${config.port}`);
       console.log(`🌍 Environment: ${config.env}`);
       console.log(`🔌 WebSocket server is ready`);
-      console.log(`💾 Using in-memory storage (data will be lost on restart)`);
+      console.log(`💾 Using PostgreSQL for storage`);
       console.log(`🔒 CORS: ${config.isDev ? 'enabled for all origins' : 'using request origin'}`);
     });
   } catch (error) {
@@ -82,18 +87,15 @@ function startServer() {
 startServer();
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('✅ Server closed');
+async function gracefulShutdown() {
+  console.log('🛑 Received shutdown signal, shutting down gracefully');
+  server.close(async () => {
+    console.log('✅ HTTP server closed');
+    await closePool();
+    console.log('✅ Database pool closed');
     process.exit(0);
   });
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

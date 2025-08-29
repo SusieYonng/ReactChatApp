@@ -7,13 +7,14 @@ import {
 } from "../models/users.js";
 import {
   addSession,
-  getSessionUser,
+  getSessionBySid,
   deleteSession,
 } from "../models/sessions.js";
 
 const router = express.Router();
 
-router.post("/register", (req, res) => {
+// Use async functions for route handlers to work with await
+router.post("/register", async (req, res) => {
   const { username } = req.body;
 
   if (!isValidUsername(username)) {
@@ -22,15 +23,18 @@ router.post("/register", (req, res) => {
   if (isForbiddenName(username)) {
     return res.status(403).json({ error: "auth-insufficient" });
   }
-  if (getUserByUsername(username)) {
+  
+  const existingUser = await getUserByUsername(username);
+  if (existingUser) {
     return res.status(409).json({ error: "user-exists" });
   }
 
-  registerUser(username);
+  // We pass a placeholder for the password as discussed
+  await registerUser(username, 'password_placeholder');
   res.status(201).json({ success: true });
 });
 
-router.post("/session", (req, res) => {
+router.post("/session", async (req, res) => {
   const { username } = req.body;
 
   if (!isValidUsername(username)) {
@@ -40,36 +44,40 @@ router.post("/session", (req, res) => {
     return res.status(403).json({ error: "auth-insufficient" });
   }
 
-  const user = getUserByUsername(username);
+  const user = await getUserByUsername(username);
   if (!user) {
+    // For security, don't reveal if the user exists.
+    // In a real app with passwords, you'd check the password here.
     return res.status(403).json({ error: "auth-insufficient" });
   }
 
-  const sid = addSession(username);
+  const sid = await addSession(username);
   res.cookie("sid", sid, { httpOnly: true });
   res.json({ username });
 });
 
-router.get("/session", (req, res) => {
-  const username = getSessionUser(req.cookies.sid);
-  if (!username) {
+router.get("/session", async (req, res) => {
+  const session = await getSessionBySid(req.cookies.sid);
+  if (!session) {
     return res.status(401).json({ error: "auth-missing" });
   }
 
-  const user = getUserByUsername(username);
+  const user = await getUserByUsername(session.username);
   if (!user) {
+    // This case is unlikely if session exists, but good for safety
     return res.status(403).json({ error: "auth-insufficient" });
   }
 
   res.json({
     username: user.username,
     nickname: user.nickname,
-    bio: user.bio,
+    avatar: user.avatar, // Added avatar
+    // bio is not in the schema, so we remove it
   });
 });
 
-router.delete("/session", (req, res) => {
-  deleteSession(req.cookies.sid);
+router.delete("/session", async (req, res) => {
+  await deleteSession(req.cookies.sid);
   res.clearCookie("sid");
   res.json({ success: true });
 });

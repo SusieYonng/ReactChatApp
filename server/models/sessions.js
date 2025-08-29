@@ -1,17 +1,26 @@
 import { randomUUID } from 'crypto';
+import { pool } from '../database.js';
 
-const sessions = {};
-
-export function addSession(username) {
+export async function addSession(username) {
   const sid = randomUUID();
-  sessions[sid] = username;
+  await pool.query(
+    'INSERT INTO sessions (sid, username) VALUES ($1, $2)',
+    [sid, username]
+  );
   return sid;
 }
 
-export function getSessionUser(sid) {
-  return sessions[sid];
+export async function getSessionBySid(sid) {
+  if (!sid) {
+    return null;
+  }
+  const { rows } = await pool.query('SELECT * FROM sessions WHERE sid = $1', [sid]);
+  return rows[0] || null;
 }
 
-export function deleteSession(sid) {
-  delete sessions[sid];
+export async function deleteSession(sid) {
+  if (!sid) {
+    return;
+  }
+  await pool.query('DELETE FROM sessions WHERE sid = $1', [sid]);
 }

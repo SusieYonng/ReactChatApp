@@ -1,5 +1,5 @@
 import express from "express";
-import { getSessionUser } from "../models/sessions.js";
+import { getSessionBySid } from "../models/sessions.js";
 import {
   addFriend,
   getFriends,
@@ -11,132 +11,125 @@ import {
 
 const router = express.Router();
 
-// POST /api/v1/friends - Add friend directly
-router.post("/friends", (req, res) => {
-  const sid = req.cookies.sid;
-  const currentUser = getSessionUser(sid);
-
-  if (!currentUser) {
+// Middleware to check for authenticated user
+const isAuthenticated = async (req, res, next) => {
+  const session = await getSessionBySid(req.cookies.sid);
+  if (!session) {
     return res.status(401).json({ error: "auth-missing" });
   }
+  req.username = session.username;
+  next();
+};
 
+// This endpoint is less common with a request system, but kept for now.
+router.post("/friends", isAuthenticated, async (req, res) => {
   const { friendUsername } = req.body;
 
-  if (!friendUsername || !getUserByUsername(friendUsername)) {
-    return res.status(404).json({ error: "user-not-found" });
-  }
+  try {
+    const friend = await getUserByUsername(friendUsername);
+    if (!friend) {
+      return res.status(404).json({ error: "user-not-found" });
+    }
 
-  const success = addFriend(currentUser, friendUsername);
-  if (!success) {
-    return res.status(400).json({ error: "cannot-add-friend" });
-  }
+    const success = await addFriend(req.username, friendUsername);
+    if (!success) {
+      return res.status(400).json({ error: "cannot-add-friend" });
+    }
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error adding friend:', error);
+    res.status(500).json({ error: 'internal-server-error' });
+  }
 });
 
-// GET /api/v1/friends - Get current user's friends
-router.get("/friends", (req, res) => {
-  const sid = req.cookies.sid;
-  const currentUser = getSessionUser(sid);
-
-  if (!currentUser) {
-    return res.status(401).json({ error: "auth-missing" });
+router.get("/friends", isAuthenticated, async (req, res) => {
+  try {
+    const friendUsernames = await getFriends(req.username);
+    const friends = await Promise.all(
+      friendUsernames.map(async (username) => {
+        const user = await getUserByUsername(username);
+        return {
+          username: user.username,
+          nickname: user.nickname,
+          bio: user.bio,
+          avatar: user.avatar,
+        };
+      })
+    );
+    res.json({ friends });
+  } catch (error) {
+    console.error('Error getting friends:', error);
+    res.status(500).json({ error: 'internal-server-error' });
   }
-
-  const friends = getFriends(currentUser).map((username) => {
-    const user = getUserByUsername(username);
-    return {
-      username: user.username,
-      nickname: user.nickname,
-      bio: user.bio,
-      avatar: user.avatar,
-    };
-  });
-
-  res.json({ friends });
 });
 
-// POST /api/v1/friends/request - Send friend request
-router.post("/friends/request", (req, res) => {
-  const from = getSessionUser(req.cookies.sid);
-  if (!from) {
-    return res.status(401).json({ error: "auth-missing" });
-  }
-
+router.post("/friends/request", isAuthenticated, async (req, res) => {
   const { friendUsername } = req.body;
-  if (!friendUsername || from === friendUsername) {
+  if (!friendUsername || req.username === friendUsername) {
     return res.status(400).json({ error: "invalid-request" });
   }
 
   try {
-    addFriendRequest(from, friendUsername);
+    await addFriendRequest(req.username, friendUsername);
     
-    // Send WebSocket notification to the recipient
     const wsManager = req.app.get('wsManager');
     if (wsManager) {
-      console.log(`Sending friend request notification: from=${from}, to=${friendUsername}`);
-      wsManager.sendFriendRequestNotification(friendUsername, from);
-    } else {
-      console.log('WebSocket manager not found for friend request notification');
+      wsManager.sendFriendRequestNotification(friendUsername, req.username);
     }
     
     res.json({ success: true });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Handle specific, known errors
+    if (err.message === 'user-not-found' || err.message === 'already-friends' || err.message === 'request-already-sent') {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('Error sending friend request:', err);
+    res.status(500).json({ error: 'internal-server-error' });
   }
 });
 
-// GET /api/v1/friends/requests - Get friend requests received by current user
-router.get("/friends/requests", (req, res) => {
-  const username = getSessionUser(req.cookies.sid);
-  if (!username) {
-    return res.status(401).json({ error: "auth-missing" });
+router.get("/friends/requests", isAuthenticated, async (req, res) => {
+  try {
+    const requestUsernames = await getFriendRequests(req.username);
+    const requests = await Promise.all(
+      requestUsernames.map(async (fromUsername) => {
+        const fromUser = await getUserByUsername(fromUsername);
+        return {
+          username: fromUser.username,
+          nickname: fromUser.nickname,
+          avatar: fromUser.avatar,
+        };
+      })
+    );
+    res.json(requests);
+  } catch (error) {
+    console.error('Error getting friend requests:', error);
+    res.status(500).json({ error: 'internal-server-error' });
   }
-
-  const requests = getFriendRequests(username).map((fromUsername) => {
-    const fromUser = getUserByUsername(fromUsername);
-    return {
-      username: fromUser.username,
-      nickname: fromUser.nickname,
-      avatar: fromUser.avatar,
-    };
-  });
-
-  res.json(requests);
 });
 
-// POST /api/v1/friends/requests/respond - Accept or reject a friend request
-router.post("/friends/requests/respond", (req, res) => {
-  const username = getSessionUser(req.cookies.sid);
-  if (!username) {
-    return res.status(401).json({ error: "auth-missing" });
-  }
-
+router.post("/friends/requests/respond", isAuthenticated, async (req, res) => {
   const { from, action } = req.body;
   if (!from || !["accept", "reject"].includes(action)) {
     return res.status(400).json({ error: "invalid-request" });
   }
 
-  console.log(`Friend request response: ${username} ${action}s request from ${from}`);
-
   try {
-    respondToFriendRequest(username, from, action);
-    console.log(`Friend request response processed successfully`);
+    await respondToFriendRequest(req.username, from, action);
     
-    // Send WebSocket notification to the person who sent the request
     const wsManager = req.app.get('wsManager');
     if (wsManager) {
-      console.log(`Sending friend request response notification: from=${username}, to=${from}, action=${action}`);
-      console.log(`Connected users:`, wsManager.getConnectedUsernames());
-      wsManager.sendFriendRequestResponseNotification(from, username, action);
-    } else {
-      console.log('WebSocket manager not found for friend request response notification');
+      wsManager.sendFriendRequestResponseNotification(from, req.username, action);
     }
     
     res.json({ success: true });
   } catch (err) {
+    if (err.message === 'user-not-found' || err.message === 'no-request-found') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Error responding to friend request:', err);
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: 'internal-server-error' });
   }
 });
 
